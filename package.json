@@ -1,0 +1,43 @@
+{
+  "name": "cloud-music-player",
+  "version": "1.0.0",
+  "description": "本地音乐播放器 - 网易云风格",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "dev": "NODE_ENV=development electron ."
+  },
+  "keywords": ["music", "player", "electron", "local"],
+  "author": "Cloud Music Player",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "music-metadata": "^7.14.0",
+    "node-id3": "^0.2.6"
+  },
+  "build": {
+    "appId": "com.cloudmusic.player",
+    "productName": "Cloud Music Player",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.music"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
