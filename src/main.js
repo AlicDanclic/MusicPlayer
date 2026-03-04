@@ -53,16 +53,21 @@ function createLyricsWindow() {
   lyricsWindow = new BrowserWindow({
     width: 800,
     height: 100,
+    minWidth: 800,
+    maxWidth: 800,
+    minHeight: 100,
+    maxHeight: 100,
     x: Math.round((width - 800) / 2),
     y: height - 120,
     frame: false,
     alwaysOnTop: true,
     skipTaskbar: true,
     transparent: true,
-    resizable: false,
+    thickFrame: false,
     movable: true,
     hasShadow: false,
     webPreferences: {
+      enablePreferredSizeMode: false, // 可能对尺寸有帮助
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
@@ -429,3 +434,5 @@ ipcMain.handle('get-lyrics-locked', () => {
 ipcMain.handle('get-app-version', () => {
   return app.getVersion();
 });
+
+

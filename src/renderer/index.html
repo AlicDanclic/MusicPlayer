@@ -27,7 +27,6 @@
       </div>
     </div>
     <div class="title-bar-right">
-      <!-- 主题切换按钮 -->
       <button class="theme-btn" id="themeBtn" title="切换主题">
         <svg viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
@@ -51,7 +50,6 @@
     </div>
   </div>
 
-  <!-- 主内容区 -->
   <div class="main-container">
     <!-- 左侧边栏 -->
     <aside class="sidebar">
@@ -63,6 +61,12 @@
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/>
             </svg>
             <span>本地音乐</span>
+          </li>
+          <li class="nav-item" data-view="online">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+            </svg>
+            <span>网络电台</span>
           </li>
         </ul>
       </div>
@@ -79,7 +83,6 @@
         </ul>
       </div>
 
-      <!-- 主题选择器 -->
       <div class="nav-section theme-section">
         <h3>主题</h3>
         <div class="theme-list">
@@ -107,7 +110,6 @@
       </div>
     </aside>
 
-    <!-- 主内容区域 -->
     <main class="content">
       <!-- 本地音乐视图 -->
       <div class="view active" id="localView">
@@ -128,12 +130,10 @@
             </button>
           </div>
         </div>
-        
         <div class="music-stats" id="musicStats">
           <span>共 <strong>0</strong> 首歌曲</span>
           <span>总时长 <strong>00:00</strong></span>
         </div>
-        
         <div class="music-list-container">
           <div class="music-list-header">
             <span class="col-index">#</span>
@@ -150,6 +150,34 @@
                 <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
               </svg>
               <p>暂无音乐，点击"添加音乐"或"扫描文件夹"</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 网络电台视图 -->
+      <div class="view" id="onlineView">
+        <div class="view-header">
+          <h1>网络电台</h1>
+          <div class="header-actions">
+            <button class="btn btn-primary" id="addOnlineBtn">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+              </svg>
+              添加链接
+            </button>
+          </div>
+        </div>
+        <div class="online-stats" id="onlineStats">
+          <span>共 <strong>0</strong> 个链接</span>
+        </div>
+        <div class="online-list-container">
+          <div class="online-list" id="onlineList">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+              </svg>
+              <p>暂无网络链接，点击"添加链接"</p>
             </div>
           </div>
         </div>
@@ -236,7 +264,6 @@
     </div>
   </div>
 
-  <!-- 音频元素 -->
   <audio id="audioPlayer" preload="metadata"></audio>
 
   <!-- 歌词设置弹窗 -->
@@ -287,6 +314,30 @@
     <div class="playlist-content" id="playlistContent">
       <div class="empty-playlist">
         <p>播放列表为空</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 网络电台添加链接的输入模态框 -->
+  <div class="modal" id="onlineInputModal">
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3>添加网络链接</h3>
+        <button class="modal-close" id="closeOnlineInputModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-secondary);">链接名称</label>
+          <input type="text" id="onlineLinkName" placeholder="例如：在线电台" style="width: 100%; padding: 8px 12px; background: var(--bg-hover); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); outline: none;">
+        </div>
+        <div style="margin-bottom: 8px;">
+          <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-secondary);">音频链接</label>
+          <input type="url" id="onlineLinkUrl" placeholder="https://example.com/audio.mp3 或任意网页链接" style="width: 100%; padding: 8px 12px; background: var(--bg-hover); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); outline: none;">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelOnlineInput">取消</button>
+        <button class="btn btn-primary" id="saveOnlineLink">保存</button>
       </div>
     </div>
   </div>

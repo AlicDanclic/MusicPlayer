@@ -7,7 +7,6 @@
 
 /* ==================== 主题变量 ==================== */
 :root {
-  /* 默认主题 - 深邃黑 */
   --primary-color: #ec4141;
   --primary-hover: #d63535;
   --bg-dark: #0d0d0d;
@@ -1197,6 +1196,145 @@ body {
   height: 100%;
   color: var(--text-tertiary);
   font-size: 14px;
+}
+
+/* ==================== 网络电台样式 ==================== */
+.online-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.online-stats strong {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.online-list-container {
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.online-list-header {
+  display: grid;
+  grid-template-columns: 50px 3fr 1fr 100px;
+  padding: 12px 20px;
+  background: var(--bg-hover);
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.online-list {
+  max-height: calc(100vh - 350px);
+  overflow-y: auto;
+}
+
+.online-item {
+  display: grid;
+  grid-template-columns: 50px 3fr 1fr 100px;
+  padding: 12px 20px;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.online-item:hover {
+  background: var(--bg-hover);
+}
+
+.online-item.playing {
+  background: rgba(236, 65, 65, 0.1);
+}
+
+.online-item.playing .col-name {
+  color: var(--primary-color);
+}
+
+.col-index {
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+
+.online-item.playing .col-index::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background: var(--primary-color);
+  border-radius: 50%;
+  animation: pulse 1s infinite;
+}
+
+.col-name {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.col-url {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.col-action {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.online-action-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.online-action-btn:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.online-action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ==================== 自定义输入框样式 ==================== */
+.modal-body input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border 0.2s ease;
+}
+
+.modal-body input:focus {
+  border-color: var(--primary-color);
 }
 
 /* ==================== 滚动条样式 ==================== */
