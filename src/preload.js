@@ -47,5 +47,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   
   // 应用信息
-  getAppVersion: () => ipcRenderer.invoke('get-app-version')
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+
+  // ==================== 新增 B站视频相关 API ====================
+  // 获取视频信息
+  bilibiliGetVideoInfo: (params) => ipcRenderer.invoke('bilibili-get-video-info', params),
+  // 获取视频播放地址
+  bilibiliGetPlayUrl: (params) => ipcRenderer.invoke('bilibili-get-playurl', params),
+  // 搜索视频
+  bilibiliSearch: (params) => ipcRenderer.invoke('bilibili-search', params)
 });

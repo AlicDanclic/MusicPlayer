@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cloud Music Player</title>
   <link rel="stylesheet" href="styles.css">
+  <!-- 引入 DPlayer 样式 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dplayer/dist/DPlayer.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body data-theme="dark">
@@ -67,6 +69,13 @@
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
             </svg>
             <span>网络电台</span>
+          </li>
+          <!-- 新增B站视频导航项 -->
+          <li class="nav-item" data-view="bilibili">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18 6h-2V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-8-2h4v2h-4V4zm8 16H6V8h12v10zM8 10h8v2H8v-2zm0 4h8v2H8v-2zm0 4h8v2H8v-2z"/>
+            </svg>
+            <span>B站视频</span>
           </li>
         </ul>
       </div>
@@ -179,6 +188,75 @@
               </svg>
               <p>暂无网络链接，点击"添加链接"</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 新增B站视频视图 -->
+      <div class="view" id="bilibiliView">
+        <div class="view-header">
+          <h1>B站视频</h1>
+          <div class="header-actions" style="display: flex; gap: 10px;">
+            <input type="text" id="bvInput" placeholder="输入 BV/AV 号或链接..." style="width: 300px; padding: 8px 16px; background: var(--bg-hover); border: 1px solid var(--border-color); border-radius: 20px; color: var(--text-primary); outline: none;">
+            <button class="btn btn-primary" id="loadVideoBtn">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              播放
+            </button>
+          </div>
+        </div>
+
+        <!-- 视频播放器容器 -->
+        <div class="video-container" style="width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
+          <div id="dplayer" style="width: 100%; height: 100%;"></div>
+        </div>
+
+        <!-- 视频信息区域 -->
+        <div class="video-info-card" id="videoInfoCard" style="display: none; padding: 16px; background: var(--bg-card); border-radius: 12px; margin-bottom: 20px;">
+          <div style="display: flex; gap: 20px;">
+            <img id="videoCover" src="" alt="封面" style="width: 120px; height: 75px; object-fit: cover; border-radius: 8px;">
+            <div style="flex: 1;">
+              <h3 id="videoTitle" style="margin-bottom: 8px; font-size: 18px;"></h3>
+              <p id="videoOwner" style="color: var(--text-secondary); font-size: 14px;"></p>
+              <p id="videoDesc" style="color: var(--text-tertiary); font-size: 13px; margin-top: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 清晰度和分P选择 -->
+        <div style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label style="color: var(--text-secondary);">清晰度:</label>
+            <select id="qualitySelect" style="background: var(--bg-hover); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 12px; border-radius: 6px;">
+              <option value="127">8K</option>
+              <option value="126">杜比视界</option>
+              <option value="125">HDR</option>
+              <option value="120">4K</option>
+              <option value="116">1080P60</option>
+              <option value="80" selected>1080P</option>
+              <option value="64">720P</option>
+              <option value="32">480P</option>
+              <option value="16">360P</option>
+            </select>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label style="color: var(--text-secondary);">分P:</label>
+            <select id="pageSelect" style="background: var(--bg-hover); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 12px; border-radius: 6px;">
+              <option value="">加载视频后可选</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 播放列表 -->
+        <div class="playlist-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="font-size: 16px;">播放列表</h3>
+            <button class="btn btn-secondary" id="clearBiliPlaylistBtn" style="padding: 4px 12px; font-size: 12px;">清空</button>
+          </div>
+          <div class="bili-playlist" id="biliPlaylist" style="background: var(--bg-card); border-radius: 8px; max-height: 200px; overflow-y: auto;">
+            <!-- 动态渲染 -->
+            <div class="empty-playlist" style="padding: 20px; text-align: center; color: var(--text-tertiary);">暂无视频</div>
           </div>
         </div>
       </div>
@@ -342,6 +420,15 @@
     </div>
   </div>
 
+  <!-- 引入脚本 -->
+  <!-- DPlayer 核心库 -->
+  <script src="https://cdn.jsdelivr.net/npm/dplayer/dist/DPlayer.min.js"></script>
+  <!-- HLS.js 辅助 DASH 播放 -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <!-- BV/AV 编解码器 -->
+  <script src="bvcodec.js"></script>
+  <!-- 主应用逻辑（已包含B站模块） -->
+  <script src="app.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

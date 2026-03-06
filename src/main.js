@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const musicMetadata = require('music-metadata');
+const axios = require('axios'); // 用于请求B站API
 
 // 主窗口
 let mainWindow = null;
@@ -67,7 +68,7 @@ function createLyricsWindow() {
     movable: true,
     hasShadow: false,
     webPreferences: {
-      enablePreferredSizeMode: false, // 可能对尺寸有帮助
+      enablePreferredSizeMode: false,
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
@@ -416,10 +417,8 @@ ipcMain.handle('set-lyrics-locked', (event, locked) => {
   isLyricsLocked = locked;
   if (lyricsWindow) {
     if (locked) {
-      // 锁定时忽略鼠标事件（除了特定区域）
       lyricsWindow.setIgnoreMouseEvents(true, { forward: true });
     } else {
-      // 解锁时恢复鼠标事件
       lyricsWindow.setIgnoreMouseEvents(false);
     }
   }
@@ -435,4 +434,81 @@ ipcMain.handle('get-app-version', () => {
   return app.getVersion();
 });
 
+// ==================== B站视频相关 IPC ====================
 
+const BILI_API = {
+  info: 'https://api.bilibili.com/x/web-interface/view',
+  playurl: 'https://api.bilibili.com/x/player/playurl'
+};
+
+// 获取视频信息
+ipcMain.handle('bilibili-get-video-info', async (event, { bvid, aid }) => {
+  try {
+    const params = bvid ? { bvid } : { aid };
+    const response = await axios.get(BILI_API.info, {
+      params,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://www.bilibili.com'
+      }
+    });
+    if (response.data.code !== 0) {
+      throw new Error(response.data.message || '获取视频信息失败');
+    }
+    return { success: true, data: response.data.data };
+  } catch (error) {
+    console.error('B站视频信息获取失败:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// 获取视频播放地址（DASH格式）
+ipcMain.handle('bilibili-get-playurl', async (event, { bvid, cid, qn = 80 }) => {
+  try {
+    const params = {
+      bvid,
+      cid,
+      qn,
+      fnval: 4048,  // DASH格式
+      fourk: 1,
+      platform: 'pc'
+    };
+    const response = await axios.get(BILI_API.playurl, {
+      params,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': `https://www.bilibili.com/video/${bvid}`,
+      }
+    });
+    if (response.data.code !== 0) {
+      throw new Error(response.data.message || '获取播放地址失败');
+    }
+    return { success: true, data: response.data.data };
+  } catch (error) {
+    console.error('B站播放地址获取失败:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// 搜索视频（可选）
+ipcMain.handle('bilibili-search', async (event, { keyword, page = 1 }) => {
+  try {
+    const response = await axios.get('https://api.bilibili.com/x/web-interface/search/type', {
+      params: {
+        search_type: 'video',
+        keyword,
+        page
+      },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://search.bilibili.com'
+      }
+    });
+    if (response.data.code !== 0) {
+      throw new Error(response.data.message || '搜索失败');
+    }
+    return { success: true, data: response.data.data.result };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});

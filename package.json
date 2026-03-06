@@ -11,7 +11,12 @@
     "build:linux": "electron-builder --linux",
     "dev": "NODE_ENV=development electron ."
   },
-  "keywords": ["music", "player", "electron", "local"],
+  "keywords": [
+    "music",
+    "player",
+    "electron",
+    "local"
+  ],
   "author": "Cloud Music Player",
   "license": "MIT",
   "devDependencies": {
@@ -19,6 +24,7 @@
     "electron-builder": "^24.9.1"
   },
   "dependencies": {
+    "axios": "^1.13.6",
     "music-metadata": "^7.14.0",
     "node-id3": "^0.2.6"
   },

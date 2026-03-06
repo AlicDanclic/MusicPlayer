@@ -13,6 +13,12 @@ let currentSongLyricBinding = null;
 let onlineLinks = [];
 let currentOnlineId = null;
 
+// 新增：B站视频相关变量
+let biliPlayer = null;
+let biliPlaylist = []; // 存储视频对象 { bvid, title, cover, duration, cid, pages }
+let currentBiliIndex = -1;
+let currentBiliCid = null;
+
 const themes = ['dark', 'red', 'blue', 'purple', 'green'];
 const elements = {};
 
@@ -25,6 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
   loadOnlineLinksFromStorage();
   loadThemeFromStorage();
   switchView('local');
+  
+  // 新增：加载B站播放列表并初始化事件
+  loadBiliPlaylist();
+  initBiliEvents();
 });
 
 function initializeElements() {
@@ -138,6 +148,13 @@ function initializeAudio() {
 
 // ==================== 视图切换 ====================
 function switchView(viewName) {
+  // 如果之前是B站视图且正在播放，暂停视频
+  if (document.querySelector('.view.active')?.id === 'bilibiliView') {
+    if (biliPlayer && biliPlayer.video) {
+      biliPlayer.pause();
+    }
+  }
+  
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const target = document.getElementById(viewName + 'View');
   if (target) target.classList.add('active');
@@ -145,6 +162,13 @@ function switchView(viewName) {
     item.classList.remove('active');
     if (item.dataset.view === viewName) item.classList.add('active');
   });
+  
+  // 如果切换到B站视图，恢复播放
+  if (viewName === 'bilibili') {
+    if (biliPlayer && biliPlayer.video && biliPlayer.video.paused) {
+      biliPlayer.play();
+    }
+  }
 }
 
 // ==================== 主题 ====================
@@ -902,4 +926,324 @@ function showNotification(message) {
     n.style.transition = 'opacity 0.3s ease';
     setTimeout(() => n.remove(), 300);
   }, 2000);
+}
+
+// ==================== 新增：B站视频模块 ====================
+
+// 存储键
+const BILI_PLAYLIST_KEY = 'bilibiliPlaylist';
+
+// 加载存储的播放列表
+function loadBiliPlaylist() {
+  try {
+    const data = localStorage.getItem(BILI_PLAYLIST_KEY);
+    if (data) {
+      biliPlaylist = JSON.parse(data);
+      renderBiliPlaylist();
+    }
+  } catch (e) {}
+}
+
+// 保存播放列表
+function saveBiliPlaylist() {
+  localStorage.setItem(BILI_PLAYLIST_KEY, JSON.stringify(biliPlaylist));
+}
+
+// 渲染播放列表
+function renderBiliPlaylist() {
+  const container = document.getElementById('biliPlaylist');
+  if (!container) return;
+  if (biliPlaylist.length === 0) {
+    container.innerHTML = '<div class="empty-playlist" style="padding: 20px; text-align: center; color: var(--text-tertiary);">暂无视频</div>';
+    return;
+  }
+  container.innerHTML = biliPlaylist.map((item, idx) => {
+    const isActive = idx === currentBiliIndex;
+    return `
+      <div class="playlist-item ${isActive ? 'active' : ''}" data-index="${idx}" style="display: flex; align-items: center; gap: 12px; padding: 10px; cursor: pointer; border-bottom: 1px solid var(--border-color);">
+        <span style="color: var(--text-tertiary); width: 30px;">${idx+1}</span>
+        <img src="${item.cover}" style="width: 40px; height: 25px; object-fit: cover; border-radius: 4px;">
+        <div style="flex: 1; overflow: hidden;">
+          <div style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(item.title)}</div>
+          <div style="font-size: 11px; color: var(--text-secondary);">${item.bvid}</div>
+        </div>
+        <button class="action-btn remove-bili-item" data-index="${idx}" title="从列表移除" style="flex-shrink: 0;">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  // 为每个移除按钮绑定事件
+  container.querySelectorAll('.remove-bili-item').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.index);
+      removeFromBiliPlaylist(idx);
+    });
+  });
+
+  // 为每个列表项绑定点击播放
+  container.querySelectorAll('.playlist-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.remove-bili-item')) return;
+      const idx = parseInt(item.dataset.index);
+      playBiliVideo(idx);
+    });
+  });
+}
+
+// 添加到播放列表
+function addToBiliPlaylist(videoInfo) {
+  // 避免重复添加相同的 bvid
+  const exists = biliPlaylist.some(v => v.bvid === videoInfo.bvid);
+  if (exists) {
+    showNotification('该视频已在列表中');
+    return;
+  }
+  biliPlaylist.push({
+    bvid: videoInfo.bvid,
+    title: videoInfo.title,
+    cover: videoInfo.pic,
+    duration: videoInfo.duration,
+    pages: videoInfo.pages,
+    cid: videoInfo.cid || (videoInfo.pages ? videoInfo.pages[0].cid : null)
+  });
+  saveBiliPlaylist();
+  renderBiliPlaylist();
+  showNotification('已添加到播放列表');
+}
+
+// 从播放列表移除
+function removeFromBiliPlaylist(index) {
+  biliPlaylist.splice(index, 1);
+  if (currentBiliIndex === index) {
+    // 如果移除的是当前播放的，停止播放并清空信息
+    if (biliPlayer) {
+      biliPlayer.destroy();
+      biliPlayer = null;
+    }
+    currentBiliIndex = -1;
+    document.getElementById('videoInfoCard').style.display = 'none';
+  } else if (currentBiliIndex > index) {
+    currentBiliIndex--;
+  }
+  saveBiliPlaylist();
+  renderBiliPlaylist();
+}
+
+// 清空播放列表
+function clearBiliPlaylist() {
+  biliPlaylist = [];
+  currentBiliIndex = -1;
+  if (biliPlayer) {
+    biliPlayer.destroy();
+    biliPlayer = null;
+  }
+  document.getElementById('videoInfoCard').style.display = 'none';
+  saveBiliPlaylist();
+  renderBiliPlaylist();
+}
+
+// 播放指定索引的视频
+async function playBiliVideo(index) {
+  if (index < 0 || index >= biliPlaylist.length) return;
+  const video = biliPlaylist[index];
+  currentBiliIndex = index;
+  currentBiliCid = video.cid;
+
+  // 暂停音乐播放
+  if (isPlaying) {
+    audioPlayer.pause();
+    isPlaying = false;
+    elements.playIcon.style.display = 'block';
+    elements.pauseIcon.style.display = 'none';
+  }
+
+  try {
+    showLoading(true);
+    // 获取视频信息（确保最新分P）
+    const infoRes = await window.electronAPI.bilibiliGetVideoInfo({ bvid: video.bvid });
+    if (!infoRes.success) throw new Error(infoRes.error);
+    const data = infoRes.data;
+    // 更新视频信息显示
+    document.getElementById('videoCover').src = data.pic;
+    document.getElementById('videoTitle').textContent = data.title;
+    document.getElementById('videoOwner').textContent = data.owner.name;
+    document.getElementById('videoDesc').textContent = data.desc || '暂无简介';
+    document.getElementById('videoInfoCard').style.display = 'block';
+
+    // 更新分P下拉框
+    const pageSelect = document.getElementById('pageSelect');
+    if (data.pages && data.pages.length > 1) {
+      pageSelect.innerHTML = data.pages.map((p, i) => `<option value="${p.cid}">P${i+1} ${p.part}</option>`).join('');
+      pageSelect.disabled = false;
+      // 默认选择之前保存的cid，如果没有则选第一个
+      pageSelect.value = currentBiliCid || data.pages[0].cid;
+    } else {
+      pageSelect.innerHTML = '<option value="">单P</option>';
+      pageSelect.disabled = true;
+      currentBiliCid = data.cid;
+    }
+
+    // 加载视频流
+    await loadBiliVideo(video.bvid, currentBiliCid);
+    renderBiliPlaylist();
+  } catch (error) {
+    showNotification('播放失败: ' + error.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// 加载视频流
+async function loadBiliVideo(bvid, cid) {
+  const qn = parseInt(document.getElementById('qualitySelect').value, 10);
+  const res = await window.electronAPI.bilibiliGetPlayUrl({ bvid, cid, qn });
+  if (!res.success) throw new Error(res.error);
+  const data = res.data;
+
+  if (!biliPlayer) {
+    // 初始化 DPlayer
+    biliPlayer = new DPlayer({
+      container: document.getElementById('dplayer'),
+      autoplay: true,
+      theme: '#ec4141',
+      screenshot: true,
+      lang: 'zh-cn',
+      video: {}
+    });
+  }
+
+  if (data.dash) {
+    // DASH 格式：视频和音频分离
+    const videoStream = data.dash.video.sort((a, b) => b.id - a.id)[0];
+    const audioStream = data.dash.audio.sort((a, b) => b.id - a.id)[0];
+    const videoUrl = videoStream.baseUrl || videoStream.base_url;
+    const audioUrl = audioStream.baseUrl || audioStream.base_url;
+
+    // DPlayer 可以通过 quality 切换，但简单起见我们使用 m3u8 或直接设置视频源
+    // 这里采用自定义类型处理
+    biliPlayer.switchVideo({
+      url: videoUrl,
+      type: 'customHls',
+      customType: {
+        customHls: function (video, player) {
+          const hls = new Hls();
+          hls.loadSource(videoUrl);
+          hls.attachMedia(video);
+        }
+      }
+    });
+    // 如果有音频流，DPlayer 不支持分离音频，我们可以直接播放视频（包含音频）或者用其他方案
+    // 实际 B站 DASH 的视频流可能不包含音频，需要额外处理。这里简化：使用视频流（部分视频流可能包含音频）
+    // 更好的方案是使用 flv.js 或 hls.js 处理，但为简化，我们直接使用视频流地址，并期望它包含音频。
+    // 如果遇到无声，可以考虑合并流，但实现复杂，此处忽略。
+  } else if (data.durl) {
+    // 普通格式
+    biliPlayer.switchVideo({
+      url: data.durl[0].url,
+      type: 'auto'
+    });
+  } else {
+    throw new Error('不支持的视频格式');
+  }
+
+  // 绑定事件：播放结束自动下一集
+  biliPlayer.on('ended', () => {
+    playNextBili();
+  });
+}
+
+// 下一集
+function playNextBili() {
+  if (biliPlaylist.length === 0) return;
+  let nextIndex = currentBiliIndex + 1;
+  if (nextIndex >= biliPlaylist.length) nextIndex = 0;
+  playBiliVideo(nextIndex);
+}
+
+// 上一集
+function playPrevBili() {
+  if (biliPlaylist.length === 0) return;
+  let prevIndex = currentBiliIndex - 1;
+  if (prevIndex < 0) prevIndex = biliPlaylist.length - 1;
+  playBiliVideo(prevIndex);
+}
+
+// 初始化B站事件
+function initBiliEvents() {
+  const loadBtn = document.getElementById('loadVideoBtn');
+  const bvInput = document.getElementById('bvInput');
+  const qualitySelect = document.getElementById('qualitySelect');
+  const pageSelect = document.getElementById('pageSelect');
+  const clearBtn = document.getElementById('clearBiliPlaylistBtn');
+
+  if (!loadBtn || !bvInput) return;
+
+  loadBtn.addEventListener('click', async () => {
+    const input = bvInput.value.trim();
+    if (!input) return;
+    try {
+      const { bvid } = BVCodec.parseVideoId(input);
+      // 获取视频信息
+      const res = await window.electronAPI.bilibiliGetVideoInfo({ bvid });
+      if (!res.success) throw new Error(res.error);
+      const videoInfo = res.data;
+      // 添加到播放列表
+      addToBiliPlaylist(videoInfo);
+      // 自动播放（如果是第一个或手动选择）
+      playBiliVideo(biliPlaylist.length - 1);
+    } catch (error) {
+      showNotification('加载失败: ' + error.message);
+    }
+  });
+
+  // 回车键
+  bvInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') loadBtn.click();
+  });
+
+  // 清晰度切换
+  qualitySelect.addEventListener('change', () => {
+    if (currentBiliIndex !== -1 && currentBiliCid) {
+      const video = biliPlaylist[currentBiliIndex];
+      loadBiliVideo(video.bvid, currentBiliCid);
+    }
+  });
+
+  // 分P切换
+  pageSelect.addEventListener('change', (e) => {
+    if (currentBiliIndex !== -1) {
+      currentBiliCid = parseInt(e.target.value, 10);
+      const video = biliPlaylist[currentBiliIndex];
+      loadBiliVideo(video.bvid, currentBiliCid);
+    }
+  });
+
+  clearBtn.addEventListener('click', clearBiliPlaylist);
+}
+
+// 显示/隐藏加载遮罩（复用原函数）
+function showLoading(show) {
+  // 如果原app.js中没有定义showLoading，则创建一个简单的遮罩
+  let mask = document.getElementById('loadingMask');
+  if (!mask) {
+    mask = document.createElement('div');
+    mask.id = 'loadingMask';
+    mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;gap:20px;z-index:1000;';
+    mask.innerHTML = '<div class="spinner" style="width:50px;height:50px;border:3px solid var(--border-color);border-top-color:var(--accent-color);border-radius:50%;animation:spin 1s linear infinite;"></div><p style="color:var(--text-secondary);">正在加载视频...</p>';
+    document.body.appendChild(mask);
+  }
+  mask.style.display = show ? 'flex' : 'none';
+}
+
+// 添加CSS动画（如果不存在）
+if (!document.querySelector('#bili-style')) {
+  const style = document.createElement('style');
+  style.id = 'bili-style';
+  style.textContent = `
+    @keyframes spin { to { transform: rotate(360deg); } }
+  `;
+  document.head.appendChild(style);
 }
